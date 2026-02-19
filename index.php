@@ -10,16 +10,26 @@ $path = rtrim(parse_url($uri, PHP_URL_PATH) ?? '/', '/');
 $path = $path === '' ? '/' : $path;
 
 if ($method === 'GET' && ($path === '/health' || $path === '/heath')) {
-    if ($pdo instanceof PDO) {
-        try {
-            $pdo->query('SELECT 1');
-            sendResponse(200, ['message' => 'conectado ao banco de dados']);
-        } catch (PDOException $exception) {
-            sendResponse(503, ['message' => 'nao conectado ao banco de dados']);
-        }
+    if (!$pdo instanceof PDO) {
+        // Mostra o motivo real
+        sendResponse(503, [
+            'message' => 'nao conectado ao banco de dados',
+            'error' => $connectionError ?? 'pdo null (sem detalhe)',
+            'env' => [
+                'DB_HOST' => envValue('DB_HOST'),
+                'DB_PORT' => envValue('DB_PORT'),
+                'DB_USER' => envValue('DB_USER'),
+                'DB_NAME' => envValue('DB_NAME'),
+            ],
+        ]);
     }
 
-    sendResponse(503, ['message' => 'nao conectado ao banco de dados']);
+    try {
+        $pdo->query('SELECT 1');
+        sendResponse(200, ['message' => 'conectado ao banco de dados']);
+    } catch (PDOException $e) {
+        sendResponse(503, ['message' => 'nao conectado ao banco de dados', 'error' => $e->getMessage()]);
+    }
 }
 
 sendResponse(404, ['error' => 'Rota nao encontrada']);
